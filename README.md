@@ -9,34 +9,42 @@ Requires Python 3.8 or newer. No installation or third-party packages are needed
 ## Run
 
 ```sh
-python3 bugproof.py --project-dir . --output-dir bugproof-evidence -- python3 -m unittest discover -s tests
+python3 bugproof.py --project-dir . --output-dir bugproof-evidence -- python3 -m unittest tests.test_regression
 ```
 
 The command writes `bugproof-evidence/bugproof.json` and `bugproof-evidence/bugproof.md`, and exits with the test command's exit code. The report records the real captured output and uses the observed exit code for PASS/FAIL. Use a trusted command: shell metacharacters are interpreted by the local shell. Avoid output directory overlap with tracked files if you do not want to add generated evidence to version control.
 
 ## Demo: reproduce, fix, prove
 
-`tests/test_regression.py` is the same regression suite in both stages. To capture the red baseline, temporarily replace the return line in `example.py` with `return number % 2 == -1`, then run:
+`tests/test_broken_example.py` contains four regression checks for `broken_example.py`. The checked-in `broken_example.py` is in its corrected state. To reproduce the failing baseline, temporarily replace its return line with `return number % 2 == -1`, then run:
 
 ```sh
-python3 bugproof.py --project-dir . --output-dir bugproof-before -- python3 -m unittest tests.test_regression
+python3 bugproof.py --project-dir . --output-dir bugproof-before -- python3 -m unittest tests.test_broken_example
 ```
 
-Confirm the negative-odd and positive-odd checks fail. Then make the minimal correction, `return number % 2 != 0`, and rerun the same regression suite, saving the passing evidence separately:
+The baseline should fail the positive-odd and negative-odd checks. The command must produce a nonzero exit code. Then restore the correct implementation, `return number % 2 != 0`, and run the same test command, saving the passing evidence separately:
 
 ```sh
-python3 bugproof.py --project-dir . --output-dir bugproof-after -- python3 -m unittest tests.test_regression
+python3 bugproof.py --project-dir . --output-dir bugproof-after -- python3 -m unittest tests.test_broken_example
 ```
 
-Inspect both JSON and Markdown reports. The before and after records must show actual nonzero and zero exit codes, respectively. Keep `example.py` in the corrected state. `AGENT37_WORKFLOW.md` describes this red/green sequence and evidence requirements.
+Inspect both JSON and Markdown reports. They should show the same command, four tests, and actual nonzero/zero exit codes for the before/after runs. Leave `broken_example.py` in the corrected state. `AGENT37_WORKFLOW.md` describes the red/green sequence and evidence requirements.
 
 ## Tests
+
+Run the main green suite:
 
 ```sh
 python3 -m unittest tests.test_bugproof tests.test_regression -v
 ```
 
-The green suite covers fixed regression behavior and BugProof's process evidence, command handling, and report generation. `tests.test_broken_example` is an intentionally failing demonstration test; run it separately as shown above, not as part of the green suite. All test commands use Python's built-in `unittest` runner.
+Run the four-test demonstration suite separately, after ensuring `broken_example.py` is in its corrected state:
+
+```sh
+python3 -m unittest tests.test_broken_example -v
+```
+
+The demonstration suite is expected to pass in the checked-in state. It should fail only during the documented temporary broken-baseline experiment. All test commands use Python's built-in `unittest` runner.
 
 ## Limitations
 
