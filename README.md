@@ -1,59 +1,87 @@
 # BugProof
 
-BugProof is a small, standard-library-only Python CLI that runs a local test command and preserves process evidence as JSON and Markdown. It records the command, actual exit code, stdout, stderr, elapsed duration, UTC timestamp, and project directory. It does not infer success from source code or explanations.
+BugProof is a standard-library-only Python CLI that runs a trusted local test command and preserves the process result as JSON and Markdown. It records the command, observed exit code, stdout/stderr, elapsed duration, UTC timestamp, project directory, and timeout status.
 
-## Setup
+Its differentiator is a small **before/after evidence comparison**: compare two saved runs of the same command and get a cautious summary of whether the result changed from fail to pass, pass to fail, or stayed the same.
 
-Requires Python 3.8 or newer. No installation or third-party packages are needed. From this directory, use `python3` (or your platform's Python executable). BugProof invokes the provided command through the local shell, with the selected project directory as its working directory.
+## Requirements
 
-## Run
+Python 3.8 or newer. No installation, third-party packages, databases, or API keys are needed.
+
+## Capture a test run
+
+From the project root:
 
 ```sh
 python3 bugproof.py --project-dir . --output-dir bugproof-evidence -- python3 -m unittest tests.test_regression
 ```
 
-The command writes `bugproof-evidence/bugproof.json` and `bugproof-evidence/bugproof.md`, and exits with the test command's exit code. The report records the real captured output and uses the observed exit code for PASS/FAIL. Use a trusted command: shell metacharacters are interpreted by the local shell. Avoid output directory overlap with tracked files if you do not want to add generated evidence to version control.
+BugProof writes `bugproof.json` and `bugproof.md` in the output directory and returns the test command's exit code. The default timeout is 120 seconds. Change it with `--timeout 30`, for example.
 
-## Demo: reproduce, fix, prove
+The command is executed through the platform shell to support ordinary shell command syntax. **Only run commands you trust.** BugProof is not a sandbox. A timeout is recorded as a failure with exit code 124 and `timed_out: true`.
 
-`tests/test_broken_example.py` contains four regression checks for `broken_example.py`. The checked-in `broken_example.py` is in its corrected state. To reproduce the failing baseline, temporarily replace its return line with `return number % 2 == -1`, then run:
+## Compare two saved runs
+
+Capture the failing baseline and corrected run into separate directories. Then compare their JSON reports:
+
+```sh
+python3 bugproof.py \
+  --compare-before bugproof-before/bugproof.json \
+  --compare-after bugproof-after/bugproof.json \
+  --output-dir bugproof-comparison
+```
+
+The comparison produces `bugproof-comparison.json` and `bugproof-comparison.md`. It classifies the outcome as:
+
+- `FAIL_TO_PASS`: same command failed before and passed after.
+- `PASS_TO_FAIL`: same command passed before and failed after.
+- `PASS_TO_PASS`: both runs passed.
+- `FAIL_TO_FAIL`: both runs failed.
+- `INCOMPARABLE`: the commands differ, so BugProof refuses to claim a valid before/after improvement.
+
+The comparison command exits 0 only for `FAIL_TO_PASS`; other outcomes return 1 so they can be noticed in scripts. Read the interpretation and outputs before drawing conclusions.
+
+**Important:** This compares saved process records; it does not prove the reports are authentic, that the same source revision was used, or that the tests are complete and meaningful. Keep the reports from actual runs and do not edit them to simulate results.
+
+## Reproduce the demo
+
+`tests/test_broken_example.py` has four regression checks for `broken_example.py`. The checked-in implementation is corrected. To reproduce a failing baseline, temporarily change the return line to:
+
+```python
+return number % 2 == -1
+```
+
+Run the same command for both baseline and corrected states, using different output directories:
 
 ```sh
 python3 bugproof.py --project-dir . --output-dir bugproof-before -- python3 -m unittest tests.test_broken_example
 ```
 
-The baseline should fail the positive-odd and negative-odd checks. The command must produce a nonzero exit code. Then restore the correct implementation, `return number % 2 != 0`, and run the same test command, saving the passing evidence separately:
+Restore the correct implementation:
 
-```sh
-python3 bugproof.py --project-dir . --output-dir bugproof-after -- python3 -m unittest tests.test_broken_example
+```python
+return number % 2 != 0
 ```
 
-Inspect both JSON and Markdown reports. They should show the same command, four tests, and actual nonzero/zero exit codes for the before/after runs. Leave `broken_example.py` in the corrected state. `AGENT37_WORKFLOW.md` describes the red/green sequence and evidence requirements.
+Then rerun the exact command with `--output-dir bugproof-after` and compare the two JSON reports using the command above. Leave `broken_example.py` corrected. If the expected baseline does not fail, stop and investigate rather than claiming a reproduced bug.
 
-## Tests
-
-Run the main green suite:
+## Run tests
 
 ```sh
-python3 -m unittest tests.test_bugproof tests.test_regression -v
+python3 -m unittest tests.test_bugproof tests.test_regression tests.test_broken_example -v
 ```
 
-Run the four-test demonstration suite separately, after ensuring `broken_example.py` is in its corrected state:
+GitHub Actions runs compilation and all three test modules on pushes and pull requests.
 
-```sh
-python3 -m unittest tests.test_broken_example -v
-```
+## Limitations and safety
 
-The demonstration suite is expected to pass in the checked-in state. It should fail only during the documented temporary broken-baseline experiment. All test commands use Python's built-in `unittest` runner.
-
-## Limitations
-
-- Shell command execution is platform-shell dependent; this is not a sandbox. Run only commands you trust.
-- Output is captured in memory and written without truncation; very large outputs can consume memory and disk.
-- No timeout, process-tree management, environment scrubbing, secret redaction, log rotation, or cryptographic signing is provided.
-- Captured output and timestamps are evidence of a local process run, not proof that the test suite is complete or the fix is correct.
-- Markdown uses dynamically sized fences to keep output fences from terminating the report early. The JSON record is the source for exact output strings.
+- Shell execution is platform-dependent and is not sandboxed.
+- Timeout handling bounds the command's wait, but this is not a secure process-isolation mechanism.
+- Captured output is held in memory and written without truncation; very large output may consume memory or disk.
+- Environment scrubbing, secret redaction, log rotation, cryptographic signing, and source revision verification are not implemented.
+- Exit codes and output are evidence of a process run, not proof that the test suite is complete or the fix is correct.
+- The comparison does not parse framework-specific test counts or independently verify source changes.
 
 ## Dependencies
 
-Python standard library only. No paid APIs, external model APIs, databases, authentication, or third-party packages.
+Python standard library only.

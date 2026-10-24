@@ -1,0 +1,28 @@
+name: BugProof tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python files
+        run: python -m compileall -q .
+      - name: Run main test suite
+        run: python -m unittest tests.test_bugproof tests.test_regression -v
+      - name: Run corrected demonstration suite
+        run: python -m unittest tests.test_broken_example -v
