@@ -1,7 +1,7 @@
 # BugProof test evidence
 
 - **Status:** PASS (observed exit code 0)
-- **Command:** `python3 -m unittest tests.test_regression`
+- **Command:** `python3 -m unittest tests.test_broken_example`
 - **Project directory:** `/tmp/bugproof-work/bugproof`
 - **Run time (UTC):** 2026-10-24T09:10:39.375019+00:00
 - **Duration:** 0.983860 seconds
