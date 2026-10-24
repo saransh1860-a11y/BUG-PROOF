@@ -3,7 +3,9 @@
 
 import argparse
 import json
+import os
 import re
+import signal
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -21,33 +23,45 @@ def _decode_output(value):
 def run_test(command, project_dir, timeout=120):
     """Run a trusted local command and record its actual result.
 
-    A timed-out command is recorded with exit code 124 and timed_out=True.
-    Commands run through the platform shell for compatibility with the CLI.
+    A timeout is recorded with exit code 124. On POSIX, the command is placed
+    in its own process group so timeout cleanup can terminate its child tree.
+    Commands run through the platform shell for CLI compatibility.
     """
     started = time.monotonic()
     ran_at_utc = datetime.now(timezone.utc).isoformat()
+    popen_kwargs = {
+        "cwd": project_dir,
+        "shell": True,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+        "errors": "replace",
+    }
+    if os.name == "posix":
+        popen_kwargs["start_new_session"] = True
+
+    process = subprocess.Popen(command, **popen_kwargs)
     timed_out = False
     try:
-        completed = subprocess.run(
-            command,
-            cwd=project_dir,
-            shell=True,
-            capture_output=True,
-            text=True,
-            errors="replace",
-            check=False,
-            timeout=timeout,
-        )
-        exit_code = completed.returncode
-        stdout = completed.stdout
-        stderr = completed.stderr
+        stdout, stderr = process.communicate(timeout=timeout)
+        exit_code = process.returncode
     except subprocess.TimeoutExpired as exc:
         timed_out = True
+        if os.name == "posix":
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        else:
+            process.kill()
+        stdout, stderr = process.communicate()
+        if not stdout:
+            stdout = _decode_output(exc.stdout)
+        if not stderr:
+            stderr = _decode_output(exc.stderr)
+        stderr = (stderr or "") + "\\nBugProof: command exceeded timeout of {} seconds; terminated the command process group where supported.\\n".format(timeout)
         exit_code = 124
-        stdout = _decode_output(exc.stdout)
-        stderr = _decode_output(exc.stderr)
-        timeout_note = "\nBugProof: command exceeded timeout of {} seconds.\n".format(timeout)
-        stderr = (stderr or "") + timeout_note
+
     duration = time.monotonic() - started
     return {
         "command": command,
