@@ -101,6 +101,31 @@ class BugProofEvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "missing required fields"):
                 compare_evidence(root / "before.json", root / "after.json", root / "out")
 
+    def test_cli_end_to_end_fail_to_pass_comparison(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            before_dir = root / "before"
+            after_dir = root / "after"
+            with contextlib.redirect_stdout(io.StringIO()):
+                before_status = main([
+                    "--project-dir", directory, "--output-dir", str(before_dir),
+                    "--", "python3 -c \"raise SystemExit(1)\"",
+                ])
+                after_status = main([
+                    "--project-dir", directory, "--output-dir", str(after_dir),
+                    "--", "python3 -c \"print('fixed')\"",
+                ])
+                comparison_status = main([
+                    "--compare-before", str(before_dir / "bugproof.json"),
+                    "--compare-after", str(after_dir / "bugproof.json"),
+                    "--output-dir", str(root / "comparison"),
+                ])
+            comparison = json.loads((root / "comparison" / "bugproof-comparison.json").read_text(encoding="utf-8"))
+        self.assertEqual(before_status, 1)
+        self.assertEqual(after_status, 0)
+        self.assertEqual(comparison_status, 0)
+        self.assertEqual(comparison["outcome"], "FAIL_TO_PASS")
+
     def test_cli_rejects_incomplete_comparison_arguments(self):
         with self.assertRaises(SystemExit):
             main(["--compare-before", "before.json"])
