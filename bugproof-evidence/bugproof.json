@@ -1,9 +1,0 @@
-{
-  "command": "python3 -m unittest tests.test_regression",
-  "exit_code": 0,
-  "stdout": "",
-  "stderr": "....\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK\n",
-  "duration_seconds": 0.773562,
-  "ran_at_utc": "2026-10-24T09:10:40.929010+00:00",
-  "project_dir": "/tmp/bugproof-work/bugproof"
-}
