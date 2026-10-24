@@ -1,0 +1,9 @@
+{
+  "command": "python3 -m unittest tests.test_regression",
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "...\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n",
+  "duration_seconds": 0.042287,
+  "ran_at_utc": "2026-10-24T05:30:39.540297+00:00",
+  "project_dir": "/home/node/bugproof"
+}
