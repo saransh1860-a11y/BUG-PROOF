@@ -93,6 +93,14 @@ class BugProofEvidenceTests(unittest.TestCase):
             result, _, _ = compare_evidence(root / "before.json", root / "after.json", root / "out")
             self.assertEqual(result["outcome"], "INCOMPARABLE")
 
+    def test_comparison_rejects_missing_required_fields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "before.json").write_text(json.dumps({"command": "test"}), encoding="utf-8")
+            (root / "after.json").write_text(json.dumps({"command": "test"}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "missing required fields"):
+                compare_evidence(root / "before.json", root / "after.json", root / "out")
+
     def test_cli_rejects_incomplete_comparison_arguments(self):
         with self.assertRaises(SystemExit):
             main(["--compare-before", "before.json"])
