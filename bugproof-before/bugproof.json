@@ -1,9 +1,0 @@
-{
-  "command": "python3 -m unittest tests.test_broken_example",
-  "exit_code": 1,
-  "stdout": "",
-  "stderr": "..FF\n======================================================================\nFAIL: test_negative_odd_integer_is_odd (tests.test_broken_example.BrokenExampleRegressionTests.test_negative_odd_integer_is_odd)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/bugproof-work/bugproof/tests/test_broken_example.py\", line 8, in test_negative_odd_integer_is_odd\n    self.assertTrue(is_odd(-3))\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^^\nAssertionError: False is not true\n\n======================================================================\nFAIL: test_positive_odd_integer_is_odd (tests.test_broken_example.BrokenExampleRegressionTests.test_positive_odd_integer_is_odd)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/bugproof-work/bugproof/tests/test_broken_example.py\", line 11, in test_positive_odd_integer_is_odd\n    self.assertTrue(is_odd(3))\n    ~~~~~~~~~~~~~~~^^^^^^^^^^^\nAssertionError: False is not true\n\n----------------------------------------------------------------------\nRan 4 tests in 0.001s\n\nFAILED (failures=2)\n",
-  "duration_seconds": 0.865638,
-  "ran_at_utc": "2026-10-24T09:10:37.724016+00:00",
-  "project_dir": "/tmp/bugproof-work/bugproof"
-}
