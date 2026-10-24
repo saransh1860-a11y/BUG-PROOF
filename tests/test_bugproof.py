@@ -106,14 +106,16 @@ class BugProofEvidenceTests(unittest.TestCase):
             root = Path(directory)
             before_dir = root / "before"
             after_dir = root / "after"
+            command = "python3 -c \"from pathlib import Path; raise SystemExit(0 if Path('fixed.flag').exists() else 1)\""
             with contextlib.redirect_stdout(io.StringIO()):
                 before_status = main([
                     "--project-dir", directory, "--output-dir", str(before_dir),
-                    "--", "python3 -c \"raise SystemExit(1)\"",
+                    "--", command,
                 ])
+                (root / "fixed.flag").write_text("fixed", encoding="utf-8")
                 after_status = main([
                     "--project-dir", directory, "--output-dir", str(after_dir),
-                    "--", "python3 -c \"print('fixed')\"",
+                    "--", command,
                 ])
                 comparison_status = main([
                     "--compare-before", str(before_dir / "bugproof.json"),
