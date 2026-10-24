@@ -59,7 +59,7 @@ def run_test(command, project_dir, timeout=120):
             stdout = _decode_output(exc.stdout)
         if not stderr:
             stderr = _decode_output(exc.stderr)
-        stderr = (stderr or "") + "\\nBugProof: command exceeded timeout of {} seconds; terminated the command process group where supported.\\n".format(timeout)
+        stderr = (stderr or "") + "\nBugProof: command exceeded timeout of {} seconds; terminated the command process group where supported.\n".format(timeout)
         exit_code = 124
 
     duration = time.monotonic() - started
